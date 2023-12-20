@@ -2,7 +2,7 @@ import socket, socketserver
 import threading
 import argparse
 import ssl
-import os
+import os, errno
 import json
 
 from typing import Tuple
@@ -18,6 +18,12 @@ def forward(source: socket.socket, destination: socket.socket):
             if not data:
                 break
             destination.sendall(data)
+    except OSError as e:
+        # Check for Bad file descriptor error
+        if e.errno == errno.EBADF:
+            return
+        else:
+            raise 
     finally:
         source.close()
         destination.close()
