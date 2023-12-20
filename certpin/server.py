@@ -60,6 +60,8 @@ def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str,
     class CertpinHandler(socketserver.BaseRequestHandler):
         def handle(self) -> None:
             context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
 
             with socket.create_connection(ssl_target_addr) as upstream_sock:
                 with context.wrap_socket(upstream_sock, server_hostname=target_server_name) as upstream_ssl_sock:
