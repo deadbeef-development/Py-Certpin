@@ -1,0 +1,11 @@
+{
+    "servers": [
+        {
+            "listen_addr": ["127.0.0.1", 8180],
+            "ssl_target_addr": ["www.google.com", 443],
+            "target_server_name": "google.com",
+            "pinned_cert_filepath": "/workspaces/Py-Certpin/testfiles/google.der",
+            "debug": true
+        }
+    ]
+}

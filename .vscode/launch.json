@@ -10,7 +10,7 @@
             "request": "launch",
             "module": "certpin.server",
             "justMyCode": true,
-            "args": ["127.23.27.91", "8080", "google.com", "443", "--pinned-cert", "testcert.der", "--debug"]
+            "args": ["testfiles/config.json"]
         }
     ]
 }
