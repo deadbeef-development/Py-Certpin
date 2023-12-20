@@ -53,6 +53,10 @@ def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str,
 
         return cert == pinned_cert
 
+    def print_info(*args):
+        lhost, lport = listen_addr
+        print(f"[{lhost}:{lport} -> {target_server_name}]", *args)
+
     class CertpinHandler(socketserver.BaseRequestHandler):
         def handle(self) -> None:
             context = ssl.create_default_context()
@@ -63,10 +67,10 @@ def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str,
                     cert = upstream_ssl_sock.getpeercert(binary_form=True)
 
                     if verify_certificate(cert):
-                        print(f"[{target_server_name}] ✔ Certificate valid - Bridging connection ✔")
+                        print_info("✔ Certificate valid - Bridging connection ✔")
                         bridge_sockets(self.request, upstream_ssl_sock)
                     else:
-                        print(f"[{target_server_name}] ⚠ CERTIFICATE MISMATCH - CLOSING CONNECTION ⚠")
+                        print_info("⚠ CERTIFICATE MISMATCH - CLOSING CONNECTION ⚠")
                         # Certificate mismatch, close the connection
                         upstream_ssl_sock.close()
 
