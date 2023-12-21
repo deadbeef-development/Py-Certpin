@@ -7,6 +7,8 @@ import json
 
 from typing import Tuple
 
+RECV_BUF_SIZE = 1_048_576
+
 def load_certificate(certfile_path):
     with open(certfile_path, 'rb') as certfile:
         return certfile.read()
@@ -14,7 +16,7 @@ def load_certificate(certfile_path):
 def forward(source: socket.socket, destination: socket.socket):
     try:
         while True:
-            data = source.recv(4096)
+            data = source.recv(RECV_BUF_SIZE)
             if not data:
                 break
             destination.sendall(data)
