@@ -6,7 +6,7 @@ import ssl
 import os
 import json
 
-from .util import load_certificate, bridge_sockets
+from .util import load_certificate, bridge_sockets, open_ssl_connection
 
 def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str, int], target_server_name: str, pinned_cert_filepath: bytes = None, debug = False):
     listen_addr = tuple(listen_addr)
@@ -33,22 +33,17 @@ def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str,
 
     class CertpinHandler(socketserver.BaseRequestHandler):
         def handle(self) -> None:
-            context = ssl.create_default_context()
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
+            with open_ssl_connection(ssl_target_addr, target_server_name) as upstream_ssl_sock:
+                # Get the certificate
+                cert = upstream_ssl_sock.getpeercert(binary_form=True)
 
-            with socket.create_connection(ssl_target_addr) as upstream_sock:
-                with context.wrap_socket(upstream_sock, server_hostname=target_server_name) as upstream_ssl_sock:
-                    # Get the certificate
-                    cert = upstream_ssl_sock.getpeercert(binary_form=True)
-
-                    if verify_certificate(cert):
-                        print_info("✔ Certificate valid - Bridging connection ✔")
-                        bridge_sockets(self.request, upstream_ssl_sock)
-                    else:
-                        print_info("⚠ CERTIFICATE MISMATCH - CLOSING CONNECTION ⚠")
-                        # Certificate mismatch, close the connection
-                        upstream_ssl_sock.close()
+                if verify_certificate(cert):
+                    print_info("✔ Certificate valid - Bridging connection ✔")
+                    bridge_sockets(self.request, upstream_ssl_sock)
+                else:
+                    print_info("⚠ CERTIFICATE MISMATCH - CLOSING CONNECTION ⚠")
+                    # Certificate mismatch, close the connection
+                    upstream_ssl_sock.close()
 
     with socketserver.ThreadingTCPServer(listen_addr, CertpinHandler) as server:
         server.serve_forever()
