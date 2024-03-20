@@ -1,13 +1,15 @@
 from typing import Tuple
-import socket, socketserver
+import socketserver
 import threading
 import argparse
 import ssl
 import os
 import json
+from contextlib import contextmanager
 
 from .util import load_certificate, bridge_sockets, open_ssl_connection
 
+@contextmanager
 def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str, int], target_server_name: str, pinned_cert_filepath: str = None, debug = False):
     listen_addr = tuple(listen_addr)
     ssl_target_addr = tuple(ssl_target_addr)
@@ -46,10 +48,14 @@ def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str,
                     upstream_ssl_sock.close()
 
     with socketserver.ThreadingTCPServer(listen_addr, CertpinHandler) as server:
-        server.serve_forever()
+        yield server
 
 def run_certpin_server_from_config(server_config: dict) -> threading.Thread:
-    t = threading.Thread(None, run_certpin_server, kwargs=server_config)
+    def target():
+        with run_certpin_server(**server_config) as server:
+            server.serve_forever()
+
+    t = threading.Thread(None, target)
     t.start()
 
     return t
