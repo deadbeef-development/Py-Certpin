@@ -8,7 +8,7 @@ import json
 
 from .util import load_certificate, bridge_sockets, open_ssl_connection
 
-def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str, int], target_server_name: str, pinned_cert_filepath: bytes = None, debug = False):
+def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str, int], target_server_name: str, pinned_cert_filepath: str = None, debug = False):
     listen_addr = tuple(listen_addr)
     ssl_target_addr = tuple(ssl_target_addr)
 
