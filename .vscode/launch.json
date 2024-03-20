@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Certpin",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "certpin.server",
             "justMyCode": true,
