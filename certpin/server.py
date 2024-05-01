@@ -1,84 +1,77 @@
-from typing import Tuple
-import socketserver
-import threading
+from typing import Tuple, Dict
 import argparse
-import ssl
 import os
 import json
 from contextlib import contextmanager
+from logging import getLogger
 
-from .util import load_certificate, bridge_sockets, open_ssl_connection
+from .proxy import Proxy, ProxyServer
+from .util import load_der_certfile, connect_ssl_insecure
 
-@contextmanager
-def run_certpin_server(listen_addr: Tuple[str, int], ssl_target_addr: Tuple[str, int], target_server_name: str, pinned_cert_filepath: str = None, debug = False):
-    listen_addr = tuple(listen_addr)
-    ssl_target_addr = tuple(ssl_target_addr)
+logger = getLogger('certpin.server')
 
-    def get_pinned_cert():
-        if pinned_cert_filepath is not None:
-            return load_certificate(pinned_cert_filepath)
+class CertMismatch(Exception):
+    pass
+
+def create_certpin_proxy(
+        target_sni: str,
+        target_certfile: str,
+        target_address: Tuple[str, int],
+        certfile: str, keyfile: str
+) -> Proxy:
+    @contextmanager
+    def connect_upstream():
+        with connect_ssl_insecure(target_address, target_sni) as upstream_ssl_sock:
+            pinned_cert = load_der_certfile(target_certfile)
+            upstream_cert = upstream_ssl_sock.getpeercert(binary_form=True)
+
+            if upstream_cert == pinned_cert:
+                logger.info(f"[{target_sni}] ✔ Certificate valid - Bridging connection ✔")
+                yield upstream_ssl_sock
+            else:
+                logger.error(f"[{target_sni}] ⚠ CERTIFICATE MISMATCH - CLOSING CONNECTION ⚠")
+                raise CertMismatch(target_sni, target_address)
     
-    def verify_certificate(cert) -> bool:
-        if debug:
-            print(ssl.DER_cert_to_PEM_cert(cert))
-        
-        pinned_cert = get_pinned_cert()
-        
-        if pinned_cert is None:
-            return True
+    return Proxy(
+        certfile=certfile,
+        keyfile=keyfile,
+        connect_upstream=connect_upstream
+    )
 
-        return cert == pinned_cert
+parser = argparse.ArgumentParser()
+parser.add_argument('bind_address')
+parser.add_argument('proxy_config_dir')
 
-    def print_info(*args):
-        lhost, lport = listen_addr
-        print(f"[{lhost}:{lport} -> {target_server_name}]", *args)
+def load_proxies(proxy_config_dir: str) -> Dict[str, Proxy]:
+    proxies = dict()
 
-    class CertpinHandler(socketserver.BaseRequestHandler):
-        def handle(self) -> None:
-            with open_ssl_connection(ssl_target_addr, target_server_name) as upstream_ssl_sock:
-                # Get the certificate
-                cert = upstream_ssl_sock.getpeercert(binary_form=True)
+    for file_name in os.listdir(proxy_config_dir):
+        file_path = os.path.join(proxy_config_dir, file_name)
+        target_sni = file_name[:-5] # Ignore the .JSON
 
-                if verify_certificate(cert):
-                    print_info("✔ Certificate valid - Bridging connection ✔")
-                    bridge_sockets(self.request, upstream_ssl_sock)
-                else:
-                    print_info("⚠ CERTIFICATE MISMATCH - CLOSING CONNECTION ⚠")
-                    # Certificate mismatch, close the connection
-                    upstream_ssl_sock.close()
+        try:
+            with open(file_path, 'r') as fio:
+                proxy_config = json.load(fio)
+        except Exception as e:
+            logger.error("Could not load proxy config", file_path, e)
+            continue
 
-    with socketserver.ThreadingTCPServer(listen_addr, CertpinHandler) as server:
-        yield server
+        proxies[target_sni] = create_certpin_proxy(
+            target_sni=target_sni,
+            *proxy_config
+        )
 
-def run_certpin_server_from_config(server_config: dict) -> threading.Thread:
-    def target():
-        with run_certpin_server(**server_config) as server:
-            server.serve_forever()
+    return proxies
 
-    t = threading.Thread(None, target)
-    t.start()
+def __main__():
+    args = parser.parse_args()
+    
+    address = args.bind_address
+    proxies = load_proxies(args.proxy_config_dir)
 
-    return t
+    with ProxyServer(address, proxies.get) as server:
+        server.serve_forever()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    __main__()
 
-    parser.add_argument('config_filepath')
-
-    args = parser.parse_args()
-    config_filepath = args.config_filepath
-
-    if os.path.isfile(config_filepath):
-        with open(config_filepath, 'r') as fio:
-            config = json.load(fio)
-    else:
-        print(f"Cannot open {config_filepath}")
-
-    threads = list()
-    
-    for server_config in config['servers']:
-        t = run_certpin_server_from_config(server_config)
-        threads.append(t)
-    
-    for t in threads:
-        t.join()

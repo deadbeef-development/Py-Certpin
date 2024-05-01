@@ -11,7 +11,7 @@ CONTEXT = ssl.create_default_context()
 CONTEXT.check_hostname = False
 CONTEXT.verify_mode = ssl.CERT_NONE
 
-def load_certificate(certfile_path):
+def load_der_certfile(certfile_path):
     with open(certfile_path, 'rb') as certfile:
         return certfile.read()
 
@@ -45,7 +45,7 @@ def bridge_sockets(sock1, sock2):
         server_to_client_thread.join()
 
 @contextmanager
-def open_ssl_connection(ssl_server_addr: Tuple, server_name: str):
+def connect_ssl_insecure(ssl_server_addr: Tuple, server_name: str):
     upstream_ssl_sock: ssl.SSLSocket
 
     with socket.create_connection(ssl_server_addr) as upstream_sock:

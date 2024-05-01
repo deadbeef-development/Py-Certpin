@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from .util import open_ssl_connection
+from .util import connect_ssl_insecure
 
 parser = ArgumentParser()
 
@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     ssl_server_addr = host, int(port)
 
-    with open_ssl_connection(ssl_server_addr, args.server_name) as sock:
+    with connect_ssl_insecure(ssl_server_addr, args.server_name) as sock:
         with open(args.der_dest_file_path, 'wb') as fio:
             der = sock.getpeercert(binary_form=True)
             fio.write(der)
