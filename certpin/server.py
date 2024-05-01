@@ -54,7 +54,7 @@ def load_proxies(proxy_config_dir: str) -> Dict[str, Proxy]:
 
         proxies[target_sni] = create_certpin_proxy(
             target_sni=target_sni,
-            *proxy_config
+            **proxy_config
         )
 
     return proxies
