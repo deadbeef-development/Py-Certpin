@@ -3,7 +3,7 @@ import argparse
 import os
 import json
 from contextlib import contextmanager
-from logging import getLogger
+from logging import getLogger, INFO
 
 from .proxy import Proxy, ProxyServer
 from .util import connect_ssl_insecure, load_pem_certfile_as_der
@@ -68,6 +68,8 @@ parser.add_argument('bind_address', type=parse_address)
 parser.add_argument('proxy_config_dir')
 
 def __main__():
+    logger.setLevel(INFO)
+
     args = parser.parse_args()
     
     address = args.bind_address
