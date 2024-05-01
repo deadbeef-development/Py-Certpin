@@ -34,7 +34,7 @@ class ProxyHandler(BaseRequestHandler):
 
 class ProxyServer(ThreadingMixIn, TCPServer):
     def __init__(self, address: Tuple[str, int], get_proxy: Callable[[str], Proxy]):
-        super().__init__(self, address, ProxyHandler, bind_and_activate=True)
+        TCPServer.__init__(self, address, ProxyHandler, bind_and_activate=True)
 
         self.get_proxy = get_proxy
         self.ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
