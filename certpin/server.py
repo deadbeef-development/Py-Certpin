@@ -38,10 +38,6 @@ def create_certpin_proxy(
         connect_upstream=connect_upstream
     )
 
-parser = argparse.ArgumentParser()
-parser.add_argument('bind_address')
-parser.add_argument('proxy_config_dir')
-
 def load_proxies(proxy_config_dir: str) -> Dict[str, Proxy]:
     proxies = dict()
 
@@ -62,6 +58,14 @@ def load_proxies(proxy_config_dir: str) -> Dict[str, Proxy]:
         )
 
     return proxies
+
+def parse_address(address_string: str) -> Tuple[str, int]:
+    host, port = address_string.split(':')
+    return (host, int(port))
+
+parser = argparse.ArgumentParser()
+parser.add_argument('bind_address', type=parse_address)
+parser.add_argument('proxy_config_dir')
 
 def __main__():
     args = parser.parse_args()
