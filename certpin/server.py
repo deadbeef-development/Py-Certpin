@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from logging import getLogger
 
 from .proxy import Proxy, ProxyServer
-from .util import load_der_certfile, connect_ssl_insecure
+from .util import connect_ssl_insecure, load_pem_certfile_as_der
 
 logger = getLogger('certpin.server')
 
@@ -22,7 +22,7 @@ def create_certpin_proxy(
     @contextmanager
     def connect_upstream():
         with connect_ssl_insecure(target_address, target_sni) as upstream_ssl_sock:
-            pinned_cert = load_der_certfile(target_certfile)
+            pinned_cert = load_pem_certfile_as_der(target_certfile)
             upstream_cert = upstream_ssl_sock.getpeercert(binary_form=True)
 
             if upstream_cert == pinned_cert:

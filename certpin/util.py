@@ -11,9 +11,9 @@ CONTEXT = ssl.create_default_context()
 CONTEXT.check_hostname = False
 CONTEXT.verify_mode = ssl.CERT_NONE
 
-def load_der_certfile(certfile_path):
-    with open(certfile_path, 'rb') as certfile:
-        return certfile.read()
+def load_pem_certfile_as_der(certfile_path: str):
+    with open(certfile_path, 'r') as fio:
+        return ssl.PEM_cert_to_DER_cert(fio.read())
 
 def forward(source: socket.socket, destination: socket.socket):
     try:
