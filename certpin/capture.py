@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import ssl
 
 from .util import connect_ssl_insecure
 
@@ -19,5 +20,5 @@ if __name__ == '__main__':
     with connect_ssl_insecure(ssl_server_addr, args.server_name) as sock:
         with open(args.der_dest_file_path, 'wb') as fio:
             der = sock.getpeercert(binary_form=True)
-            fio.write(der)
+            fio.write(ssl.DER_cert_to_PEM_cert(der))
 
