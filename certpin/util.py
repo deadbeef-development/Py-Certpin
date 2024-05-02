@@ -27,10 +27,7 @@ def forward(source: socket.socket, destination: socket.socket):
         if e.errno == errno.EBADF:
             return
         else:
-            raise 
-    finally:
-        source.close()
-        destination.close()
+            raise
 
 def bridge_sockets(sock1, sock2):
         client_to_server_thread = threading.Thread(target=forward, args=(sock1, sock2))
