@@ -3,12 +3,12 @@ import argparse
 import os
 import json
 from contextlib import contextmanager
-from logging import getLogger, INFO
+import logging
 
 from .proxy import Proxy, ProxyServer
 from .util import connect_ssl_insecure, load_pem_certfile_as_der
 
-logger = getLogger('certpin.server')
+logger = logging.getLogger('certpin.server')
 
 class CertMismatch(Exception):
     pass
@@ -26,10 +26,10 @@ def create_certpin_proxy(
             upstream_cert = upstream_ssl_sock.getpeercert(binary_form=True)
 
             if upstream_cert == pinned_cert:
-                logger.info(f"[{target_sni}] ✔ Certificate valid - Bridging connection ✔")
+                logger.info(f"✔ Accepted connection to {target_sni}")
                 yield upstream_ssl_sock
             else:
-                logger.error(f"[{target_sni}] ⚠ CERTIFICATE MISMATCH - CLOSING CONNECTION ⚠")
+                logger.error(f"⚠ Rejected connection to {target_sni}, certificate mismatch detected")
                 raise CertMismatch(target_sni, target_address)
     
     return Proxy(
@@ -68,14 +68,20 @@ parser.add_argument('bind_address', type=parse_address)
 parser.add_argument('proxy_config_dir')
 
 def __main__():
-    logger.setLevel(INFO)
+    logger.setLevel(logging.INFO)
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+    logger.info("Starting Certpin Server")
 
     args = parser.parse_args()
     
     address = args.bind_address
     proxies = load_proxies(args.proxy_config_dir)
 
+    logger.info(f"Proxies loaded: {len(proxies)}")
+
     with ProxyServer(address, proxies.get) as server:
+        logger.info(f"Listening on {':'.join(map(str, address))}")
         server.serve_forever()
 
 if __name__ == '__main__':
